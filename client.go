@@ -78,17 +78,23 @@ func New(token string, org string, options ...ClientOption) (*Client, error) {
 	return c, nil
 }
 
+var (
+	ErrMissingBaseURL    = errors.New("no baseUrl set")
+	ErrMissingAPIToken   = errors.New("no API token set")
+	ErrMissingHTTPClient = errors.New("no httpClient set")
+)
+
 func (c *Client) validate() error {
 	if c.baseUrl == "" {
-		return errors.New("no baseUrl set")
+		return ErrMissingBaseURL
 	}
 
 	if c.token == "" {
-		return errors.New("no API token set")
+		return ErrMissingAPIToken
 	}
 
 	if c.httpClient == nil {
-		return errors.New("no httpClient set")
+		return ErrMissingHTTPClient
 	}
 
 	return nil
