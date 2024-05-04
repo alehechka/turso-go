@@ -17,8 +17,8 @@ type UserInfoResponse struct {
 	User UserInfo `json:"user"`
 }
 
-func (u *UsersClient) GetUser(ctx context.Context) (UserInfo, error) {
-	res, err := u.client.Get(ctx, "/v1/current-user", nil)
+func (c *UsersClient) GetUser(ctx context.Context) (UserInfo, error) {
+	res, err := c.client.Get(ctx, "/v1/current-user", nil)
 	if err != nil {
 		return UserInfo{}, fmt.Errorf("failed to get user info: %s", err)
 	}

@@ -17,33 +17,32 @@ type Invoice struct {
 	InvoicePdf      string `json:"invoice_pdf"`
 }
 
-func (i *InvoicesClient) List(ctx context.Context) ([]Invoice, error) {
-	r, err := i.client.Get(ctx, i.URL(""), nil)
+func (c *InvoicesClient) List(ctx context.Context) ([]Invoice, error) {
+	res, err := c.client.Get(ctx, c.URL(""), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoices: %w", err)
 	}
-	defer r.Body.Close()
+	defer res.Body.Close()
 
-	org := i.client.Org
-	if isNotMemberErr(r.StatusCode, org) {
-		return nil, notMemberErr(org)
+	if c.client.isNotMemberErr(res.StatusCode) {
+		return nil, c.client.notMemberErr()
 	}
 
-	if r.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get invoices: received status code%w", parseResponseError(r))
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get invoices: received status code%w", parseResponseError(res))
 	}
 
 	type ListResponse struct {
 		Invoices []Invoice `json:"invoices"`
 	}
-	resp, err := unmarshal[ListResponse](r)
+	resp, err := unmarshal[ListResponse](res)
 	return resp.Invoices, err
 }
 
-func (i *InvoicesClient) URL(suffix string) string {
+func (c *InvoicesClient) URL(suffix string) string {
 	prefix := "/v1"
-	if i.client.Org != "" {
-		prefix = "/v1/organizations/" + i.client.Org
+	if c.client.Org != "" {
+		prefix = "/v1/organizations/" + c.client.Org
 	}
 	return prefix + "/invoices" + suffix
 }

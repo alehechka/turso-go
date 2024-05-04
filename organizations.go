@@ -326,14 +326,3 @@ func (c *OrganizationsClient) RemoveMember(ctx context.Context, username string)
 func (c *OrganizationsClient) MembersURL(suffix string) (string, error) {
 	return "/v1/organizations/" + c.client.Org + "/members" + suffix, nil
 }
-
-func isNotMemberErr(status int, org string) bool {
-	if status == http.StatusForbidden && org != "" {
-		return true
-	}
-	return false
-}
-
-func notMemberErr(org string) error {
-	return fmt.Errorf("not a member of organization %s", org)
-}
