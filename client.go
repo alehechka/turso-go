@@ -14,7 +14,7 @@ import (
 
 // Collection of all turso clients
 type Client struct {
-	baseUrl    *url.URL
+	baseUrl    string
 	token      string
 	Org        string
 	version    string
@@ -50,9 +50,7 @@ type ClientOption interface {
 const BaseURL = "https://api.turso.tech"
 
 func New(token string, org string, options ...ClientOption) *Client {
-	baseUrl, _ := url.Parse(BaseURL)
-
-	c := &Client{baseUrl: baseUrl, token: token, Org: org, httpClient: http.DefaultClient, version: getVersion()}
+	c := &Client{baseUrl: BaseURL, token: token, Org: org, httpClient: http.DefaultClient, version: getVersion()}
 
 	for _, option := range options {
 		option.apply(c)
@@ -104,10 +102,10 @@ func (o *withHTTPClient) apply(client *Client) {
 }
 
 type withBaseUrl struct {
-	baseUrl *url.URL
+	baseUrl string
 }
 
-func WithBaseUrl(baseUrl *url.URL) ClientOption {
+func WithBaseUrl(baseUrl string) ClientOption {
 	return &withBaseUrl{baseUrl: baseUrl}
 }
 
@@ -115,16 +113,16 @@ func (o *withBaseUrl) apply(client *Client) {
 	client.baseUrl = o.baseUrl
 }
 
-func (c *Client) newRequest(ctx context.Context, method, urlPath string, body io.Reader) (*http.Request, error) {
-	url, err := url.Parse(c.baseUrl.String())
+func (c *Client) NewRequest(ctx context.Context, method, urlPath string, body io.Reader) (*http.Request, error) {
+	reqURL, err := url.Parse(c.baseUrl)
 	if err != nil {
 		return nil, err
 	}
-	url, err = url.Parse(urlPath)
+	reqURL, err = reqURL.Parse(urlPath)
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, method, url.String(), body)
+	req, err := http.NewRequestWithContext(ctx, method, reqURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -132,12 +130,14 @@ func (c *Client) newRequest(ctx context.Context, method, urlPath string, body io
 		req.Header.Add("Authorization", fmt.Sprint("Bearer ", c.token))
 	}
 	req.Header.Add("User-Agent", fmt.Sprintf("turso-go/%s (%s/%s)", c.version, runtime.GOOS, runtime.GOARCH))
-	req.Header.Add("Content-Type", "application/json")
+	if body != nil {
+		req.Header.Add("Content-Type", "application/json")
+	}
 	return req, nil
 }
 
-func (c *Client) do(ctx context.Context, method, path string, body io.Reader) (*http.Response, error) {
-	req, err := c.newRequest(ctx, method, path, body)
+func (c *Client) Do(ctx context.Context, method, path string, body io.Reader) (*http.Response, error) {
+	req, err := c.NewRequest(ctx, method, path, body)
 	if err != nil {
 		return nil, err
 	}
@@ -149,23 +149,23 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader) (*
 }
 
 func (c *Client) Get(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
-	return c.do(ctx, "GET", path, body)
+	return c.Do(ctx, "GET", path, body)
 }
 
 func (c *Client) Post(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
-	return c.do(ctx, "POST", path, body)
+	return c.Do(ctx, "POST", path, body)
 }
 
 func (c *Client) Patch(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
-	return c.do(ctx, "PATCH", path, body)
+	return c.Do(ctx, "PATCH", path, body)
 }
 
 func (c *Client) Put(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
-	return c.do(ctx, "PUT", path, body)
+	return c.Do(ctx, "PUT", path, body)
 }
 
 func (c *Client) Delete(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
-	return c.do(ctx, "DELETE", path, body)
+	return c.Do(ctx, "DELETE", path, body)
 }
 
 func (c *Client) Upload(ctx context.Context, path string, fileData *os.File) (*http.Response, error) {
@@ -183,7 +183,7 @@ func (c *Client) Upload(ctx context.Context, path string, fileData *os.File) (*h
 		}
 		bodyWriter.CloseWithError(writer.Close())
 	}()
-	req, err := c.newRequest(ctx, "POST", path, body)
+	req, err := c.NewRequest(ctx, "POST", path, body)
 	if err != nil {
 		return nil, err
 	}
