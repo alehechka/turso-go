@@ -2,6 +2,7 @@ package turso
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -49,11 +50,15 @@ type ClientOption interface {
 
 const BaseURL = "https://api.turso.tech"
 
-func New(token string, org string, options ...ClientOption) *Client {
+func New(token string, org string, options ...ClientOption) (*Client, error) {
 	c := &Client{baseUrl: BaseURL, token: token, Org: org, httpClient: http.DefaultClient, version: getVersion()}
 
 	for _, option := range options {
 		option.apply(c)
+	}
+
+	if err := c.validate(); err != nil {
+		return nil, err
 	}
 
 	c.base = &client{c}
@@ -70,7 +75,23 @@ func New(token string, org string, options ...ClientOption) *Client {
 	c.Billing = (*BillingClient)(c.base)
 	c.Groups = (*GroupsClient)(c.base)
 	c.Invoices = (*InvoicesClient)(c.base)
-	return c
+	return c, nil
+}
+
+func (c *Client) validate() error {
+	if c.baseUrl == "" {
+		return errors.New("no baseUrl set")
+	}
+
+	if c.token == "" {
+		return errors.New("no API token set")
+	}
+
+	if c.httpClient == nil {
+		return errors.New("no httpClient set")
+	}
+
+	return nil
 }
 
 func getVersion() (version string) {
