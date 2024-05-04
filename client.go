@@ -12,9 +12,10 @@ import (
 
 // Collection of all turso clients
 type Client struct {
-	baseUrl *url.URL
-	token   string
-	Org     string
+	baseUrl    *url.URL
+	token      string
+	Org        string
+	httpClient *http.Client
 
 	// Single instance to be reused by all clients
 	base *client
@@ -39,8 +40,16 @@ type client struct {
 	client *Client
 }
 
-func New(base *url.URL, token string, org string) *Client {
-	c := &Client{baseUrl: base, token: token, Org: org}
+type ClientOption interface {
+	apply(*Client)
+}
+
+func New(base *url.URL, token string, org string, options ...ClientOption) *Client {
+	c := &Client{baseUrl: base, token: token, Org: org, httpClient: http.DefaultClient}
+
+	for _, option := range options {
+		option.apply(c)
+	}
 
 	c.base = &client{c}
 	c.Instances = (*InstancesClient)(c.base)
@@ -57,6 +66,18 @@ func New(base *url.URL, token string, org string) *Client {
 	c.Groups = (*GroupsClient)(c.base)
 	c.Invoices = (*InvoicesClient)(c.base)
 	return c
+}
+
+type withHTTPClient struct {
+	httpClient *http.Client
+}
+
+func WithHTTPClient(httpClient *http.Client) ClientOption {
+	return &withHTTPClient{httpClient: httpClient}
+}
+
+func (o *withHTTPClient) apply(client *Client) {
+	client.httpClient = o.httpClient
 }
 
 func (t *Client) newRequest(method, urlPath string, body io.Reader) (*http.Request, error) {
@@ -85,7 +106,7 @@ func (t *Client) do(method, path string, body io.Reader) (*http.Response, error)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := t.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +153,7 @@ func (t *Client) Upload(path string, fileData *os.File) (*http.Response, error) 
 		return nil, err
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := t.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
