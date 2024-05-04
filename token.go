@@ -1,14 +1,15 @@
 package turso
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 )
 
 type TokensClient client
 
-func (c *TokensClient) Validate(token string) (int64, error) {
-	r, err := c.client.Get("/v1/auth/validate", nil)
+func (c *TokensClient) Validate(ctx context.Context, token string) (int64, error) {
+	r, err := c.client.Get(ctx, "/v1/auth/validate", nil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to request validation: %s", err)
 	}
@@ -26,8 +27,8 @@ func (c *TokensClient) Validate(token string) (int64, error) {
 	return data.Exp, nil
 }
 
-func (c *TokensClient) Invalidate() (int64, error) {
-	r, err := c.client.Post("/v1/auth/invalidate", nil)
+func (c *TokensClient) Invalidate(ctx context.Context) (int64, error) {
+	r, err := c.client.Post(ctx, "/v1/auth/invalidate", nil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to request invalidation: %s", err)
 	}

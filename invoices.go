@@ -1,6 +1,7 @@
 package turso
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 )
@@ -16,8 +17,8 @@ type Invoice struct {
 	InvoicePdf      string `json:"invoice_pdf"`
 }
 
-func (i *InvoicesClient) List() ([]Invoice, error) {
-	r, err := i.client.Get(i.URL(""), nil)
+func (i *InvoicesClient) List(ctx context.Context) ([]Invoice, error) {
+	r, err := i.client.Get(ctx, i.URL(""), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoices: %w", err)
 	}

@@ -1,6 +1,7 @@
 package turso
 
 import (
+	"context"
 	"fmt"
 	"io"
 )
@@ -11,13 +12,13 @@ type Portal struct {
 	URL string `json:"url"`
 }
 
-func (c *BillingClient) Portal() (Portal, error) {
+func (c *BillingClient) Portal(ctx context.Context) (Portal, error) {
 	prefix := "/v1"
 	if c.client.Org != "" {
 		prefix = "/v1/organizations/" + c.client.Org
 	}
 
-	r, err := c.client.Post(prefix+"/billing/portal", nil)
+	r, err := c.client.Post(ctx, prefix+"/billing/portal", nil)
 	if err != nil {
 		return Portal{}, fmt.Errorf("failed to get database usage: %w", err)
 	}
@@ -31,7 +32,7 @@ func (c *BillingClient) Portal() (Portal, error) {
 	return resp.Portal, err
 }
 
-func (c *BillingClient) PortalForStripeId(stripeId string) (Portal, error) {
+func (c *BillingClient) PortalForStripeId(ctx context.Context, stripeId string) (Portal, error) {
 	prefix := "/v1"
 	type Body struct {
 		StripeID string `json:"stripe_id"`
@@ -42,7 +43,7 @@ func (c *BillingClient) PortalForStripeId(stripeId string) (Portal, error) {
 	if err != nil {
 		return Portal{}, fmt.Errorf("could not serialize request body: %w", err)
 	}
-	r, err := c.client.Post(prefix+"/billing/portal", body)
+	r, err := c.client.Post(ctx, prefix+"/billing/portal", body)
 	if err != nil {
 		return Portal{}, fmt.Errorf("failed to get portal: %w", err)
 	}
@@ -56,12 +57,12 @@ func (c *BillingClient) PortalForStripeId(stripeId string) (Portal, error) {
 	return resp.Portal, err
 }
 
-func (c *BillingClient) HasPaymentMethod() (bool, error) {
+func (c *BillingClient) HasPaymentMethod(ctx context.Context) (bool, error) {
 	prefix := "/v1"
 	if c.client.Org != "" {
 		prefix = "/v1/organizations/" + c.client.Org
 	}
-	r, err := c.client.Get(prefix+"/billing/payment-methods", nil)
+	r, err := c.client.Get(ctx, prefix+"/billing/payment-methods", nil)
 	if err != nil {
 		return false, fmt.Errorf("failed to get database usage: %w", err)
 	}
@@ -75,9 +76,9 @@ func (c *BillingClient) HasPaymentMethod() (bool, error) {
 	return resp.Exists, err
 }
 
-func (c *BillingClient) HasPaymentMethodWithStripeId(stripeId string) (bool, error) {
+func (c *BillingClient) HasPaymentMethodWithStripeId(ctx context.Context, stripeId string) (bool, error) {
 	prefix := "/v1"
-	r, err := c.client.Get(fmt.Sprintf("%s/billing/payment-methods?stripe_id=%s", prefix, stripeId), nil)
+	r, err := c.client.Get(ctx, fmt.Sprintf("%s/billing/payment-methods?stripe_id=%s", prefix, stripeId), nil)
 	if err != nil {
 		return false, fmt.Errorf("failed to check payment method: %w", err)
 	}
@@ -91,7 +92,7 @@ func (c *BillingClient) HasPaymentMethodWithStripeId(stripeId string) (bool, err
 	return resp.Exists, err
 }
 
-func (c *BillingClient) CreateStripeCustomer(name string) (string, error) {
+func (c *BillingClient) CreateStripeCustomer(ctx context.Context, name string) (string, error) {
 	prefix := "/v1"
 	type Body struct{ Name string }
 	body, err := marshal(Body{name})
@@ -99,7 +100,7 @@ func (c *BillingClient) CreateStripeCustomer(name string) (string, error) {
 		return "", fmt.Errorf("could not serialize request body: %w", err)
 	}
 
-	r, err := c.client.Post(prefix+"/organizations/stripe-customer", body)
+	r, err := c.client.Post(ctx, prefix+"/organizations/stripe-customer", body)
 	if err != nil {
 		return "", fmt.Errorf("failed to create stripe customer: %w", err)
 	}
@@ -133,12 +134,12 @@ type BillingCustomer struct {
 	BillingAddress BillingAddress `json:"billing_address"`
 }
 
-func (c *BillingClient) GetBillingCustomer() (BillingCustomer, error) {
+func (c *BillingClient) GetBillingCustomer(ctx context.Context) (BillingCustomer, error) {
 	prefix := "/v1"
 	if c.client.Org != "" {
 		prefix = "/v1/organizations/" + c.client.Org
 	}
-	r, err := c.client.Get(prefix+"/billing/customer", nil)
+	r, err := c.client.Get(ctx, prefix+"/billing/customer", nil)
 	if err != nil {
 		return BillingCustomer{}, fmt.Errorf("failed to get billing customer: %w", err)
 	}
@@ -152,7 +153,7 @@ func (c *BillingClient) GetBillingCustomer() (BillingCustomer, error) {
 	return resp, err
 }
 
-func (c *BillingClient) UpdateBillingCustomer(customer BillingCustomer) error {
+func (c *BillingClient) UpdateBillingCustomer(ctx context.Context, customer BillingCustomer) error {
 	prefix := "/v1"
 	if c.client.Org != "" {
 		prefix = "/v1/organizations/" + c.client.Org
@@ -161,7 +162,7 @@ func (c *BillingClient) UpdateBillingCustomer(customer BillingCustomer) error {
 	if err != nil {
 		return fmt.Errorf("could not serialize request body: %w", err)
 	}
-	r, err := c.client.Put(prefix+"/billing/customer", body)
+	r, err := c.client.Put(ctx, prefix+"/billing/customer", body)
 	if err != nil {
 		return fmt.Errorf("failed to update billing customer: %w", err)
 	}

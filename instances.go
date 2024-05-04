@@ -1,6 +1,7 @@
 package turso
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -24,8 +25,8 @@ func (e *CreateInstanceLocationError) Error() string {
 	return e.err
 }
 
-func (i *InstancesClient) List(db string) ([]Instance, error) {
-	r, err := i.client.Get(i.URL(db, ""), nil)
+func (i *InstancesClient) List(ctx context.Context, db string) ([]Instance, error) {
+	r, err := i.client.Get(ctx, i.URL(db, ""), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list instances of %s: %s", db, err)
 	}
@@ -49,9 +50,9 @@ func (i *InstancesClient) List(db string) ([]Instance, error) {
 	return resp.Instances, nil
 }
 
-func (i *InstancesClient) Delete(db, instance string) error {
+func (i *InstancesClient) Delete(ctx context.Context, db, instance string) error {
 	url := i.URL(db, "/"+instance)
-	r, err := i.client.Delete(url, nil)
+	r, err := i.client.Delete(ctx, url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to destroy instances %s of %s: %s", instance, db, err)
 	}
@@ -79,7 +80,7 @@ func (i *InstancesClient) Delete(db, instance string) error {
 	return nil
 }
 
-func (d *InstancesClient) Create(dbName, location string) (*Instance, error) {
+func (d *InstancesClient) Create(ctx context.Context, dbName, location string) (*Instance, error) {
 	type Body struct {
 		Location string
 	}
@@ -89,7 +90,7 @@ func (d *InstancesClient) Create(dbName, location string) (*Instance, error) {
 	}
 
 	url := d.URL(dbName, "")
-	res, err := d.client.Post(url, body)
+	res, err := d.client.Post(ctx, url, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new instances for %s: %s", dbName, err)
 	}
@@ -116,9 +117,9 @@ func (d *InstancesClient) Create(dbName, location string) (*Instance, error) {
 	return &data.Instance, nil
 }
 
-func (i *InstancesClient) Wait(db, instance string) error {
+func (i *InstancesClient) Wait(ctx context.Context, db, instance string) error {
 	url := i.URL(db, "/"+instance+"/wait")
-	r, err := i.client.Get(url, nil)
+	r, err := i.client.Get(ctx, url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to wait for instance %s to of %s be ready: %s", instance, db, err)
 	}

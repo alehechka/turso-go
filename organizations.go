@@ -1,6 +1,7 @@
 package turso
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 )
@@ -15,8 +16,8 @@ type Organization struct {
 	Overages bool   `json:"overages,omitempty"`
 }
 
-func (c *OrganizationsClient) List() ([]Organization, error) {
-	r, err := c.client.Get("/v2/organizations", nil)
+func (c *OrganizationsClient) List(ctx context.Context) ([]Organization, error) {
+	r, err := c.client.Get(ctx, "/v2/organizations", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to request organizations: %s", err)
 	}
@@ -38,13 +39,13 @@ func (c *OrganizationsClient) List() ([]Organization, error) {
 	return data.Orgs, nil
 }
 
-func (c *OrganizationsClient) Create(name string, stripeId string, dryRun bool) (Organization, error) {
+func (c *OrganizationsClient) Create(ctx context.Context, name string, stripeId string, dryRun bool) (Organization, error) {
 	body, err := marshal(Organization{Name: name, StripeID: stripeId})
 	if err != nil {
 		return Organization{}, fmt.Errorf("failed to marshall create org request body: %s", err)
 	}
 
-	r, err := c.client.Post(fmt.Sprintf("/v1/organizations?dry_run=%v", dryRun), body)
+	r, err := c.client.Post(ctx, fmt.Sprintf("/v1/organizations?dry_run=%v", dryRun), body)
 	if err != nil {
 		return Organization{}, fmt.Errorf("failed to post organization: %s", err)
 	}
@@ -70,8 +71,8 @@ func (c *OrganizationsClient) Create(name string, stripeId string, dryRun bool) 
 	return data.Org, nil
 }
 
-func (c *OrganizationsClient) Delete(slug string) error {
-	r, err := c.client.Delete("/v1/organizations/"+slug, nil)
+func (c *OrganizationsClient) Delete(ctx context.Context, slug string) error {
+	r, err := c.client.Delete(ctx, "/v1/organizations/"+slug, nil)
 	if err != nil {
 		return fmt.Errorf("failed to delete organization: %s", err)
 	}
@@ -113,13 +114,13 @@ type OrgUsageResponse struct {
 	OrgUsage OrgUsage `json:"organization"`
 }
 
-func (c *OrganizationsClient) Usage() (OrgUsage, error) {
+func (c *OrganizationsClient) Usage(ctx context.Context) (OrgUsage, error) {
 	prefix := "/v1"
 	if c.client.Org != "" {
 		prefix = "/v1/organizations/" + c.client.Org
 	}
 
-	r, err := c.client.Get(prefix+"/usage", nil)
+	r, err := c.client.Get(ctx, prefix+"/usage", nil)
 	if err != nil {
 		return OrgUsage{}, fmt.Errorf("failed to get database usage: %w", err)
 	}
@@ -137,13 +138,13 @@ func (c *OrganizationsClient) Usage() (OrgUsage, error) {
 	return body.OrgUsage, nil
 }
 
-func (c *OrganizationsClient) SetOverages(slug string, toggle bool) error {
+func (c *OrganizationsClient) SetOverages(ctx context.Context, slug string, toggle bool) error {
 	path := "/v1/organizations/" + slug
 	body, err := marshal(map[string]bool{"overages": toggle})
 	if err != nil {
 		return fmt.Errorf("failed to marshall set overages request body: %s", err)
 	}
-	r, err := c.client.Patch(path, body)
+	r, err := c.client.Patch(ctx, path, body)
 	if err != nil {
 		return err
 	}
@@ -167,13 +168,13 @@ type Invite struct {
 	Accepted bool   `json:"accepted,omitempty"`
 }
 
-func (c *OrganizationsClient) ListMembers() ([]Member, error) {
+func (c *OrganizationsClient) ListMembers(ctx context.Context) ([]Member, error) {
 	url, err := c.MembersURL("")
 	if err != nil {
 		return nil, err
 	}
 
-	r, err := c.client.Get(url, nil)
+	r, err := c.client.Get(ctx, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to request organization members: %s", err)
 	}
@@ -195,7 +196,7 @@ func (c *OrganizationsClient) ListMembers() ([]Member, error) {
 	return data.Members, nil
 }
 
-func (c *OrganizationsClient) AddMember(username, role string) error {
+func (c *OrganizationsClient) AddMember(ctx context.Context, username, role string) error {
 	url, err := c.MembersURL("")
 	if err != nil {
 		return err
@@ -206,7 +207,7 @@ func (c *OrganizationsClient) AddMember(username, role string) error {
 		return fmt.Errorf("failed to marshall add member request body: %s", err)
 	}
 
-	r, err := c.client.Post(url, body)
+	r, err := c.client.Post(ctx, url, body)
 	if err != nil {
 		return fmt.Errorf("failed to post organization member: %s", err)
 	}
@@ -223,7 +224,7 @@ func (c *OrganizationsClient) AddMember(username, role string) error {
 	return nil
 }
 
-func (c *OrganizationsClient) InviteMember(email, role string) error {
+func (c *OrganizationsClient) InviteMember(ctx context.Context, email, role string) error {
 	prefix := "/v1/organizations/" + c.client.Org
 
 	body, err := marshal(Invite{Email: email, Role: role})
@@ -231,7 +232,7 @@ func (c *OrganizationsClient) InviteMember(email, role string) error {
 		return fmt.Errorf("failed to marshall invite email request body: %s", err)
 	}
 
-	r, err := c.client.Post(prefix+"/invite", body)
+	r, err := c.client.Post(ctx, prefix+"/invite", body)
 	if err != nil {
 		return fmt.Errorf("failed to invite organization member: %s", err)
 	}
@@ -248,10 +249,10 @@ func (c *OrganizationsClient) InviteMember(email, role string) error {
 	return nil
 }
 
-func (c *OrganizationsClient) DeleteInvite(email string) error {
+func (c *OrganizationsClient) DeleteInvite(ctx context.Context, email string) error {
 	prefix := "/v1/organizations/" + c.client.Org
 
-	r, err := c.client.Delete(prefix+"/invites/"+email, nil)
+	r, err := c.client.Delete(ctx, prefix+"/invites/"+email, nil)
 	if err != nil {
 		return fmt.Errorf("failed to remove pending invite: %s", err)
 	}
@@ -272,10 +273,10 @@ func (c *OrganizationsClient) DeleteInvite(email string) error {
 	return nil
 }
 
-func (c *OrganizationsClient) ListInvites() ([]Invite, error) {
+func (c *OrganizationsClient) ListInvites(ctx context.Context) ([]Invite, error) {
 	prefix := "/v1/organizations/" + c.client.Org
 
-	r, err := c.client.Get(prefix+"/invites", nil)
+	r, err := c.client.Get(ctx, prefix+"/invites", nil)
 	if err != nil {
 		return []Invite{}, fmt.Errorf("failed to list invites: %s", err)
 	}
@@ -299,13 +300,13 @@ func (c *OrganizationsClient) ListInvites() ([]Invite, error) {
 	return data.Invites, nil
 }
 
-func (c *OrganizationsClient) RemoveMember(username string) error {
+func (c *OrganizationsClient) RemoveMember(ctx context.Context, username string) error {
 	url, err := c.MembersURL("/" + username)
 	if err != nil {
 		return err
 	}
 
-	r, err := c.client.Delete(url, nil)
+	r, err := c.client.Delete(ctx, url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to delete organization member: %s", err)
 	}

@@ -1,6 +1,7 @@
 package turso
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -80,7 +81,7 @@ func (o *withHTTPClient) apply(client *Client) {
 	client.httpClient = o.httpClient
 }
 
-func (t *Client) newRequest(method, urlPath string, body io.Reader) (*http.Request, error) {
+func (t *Client) newRequest(ctx context.Context, method, urlPath string, body io.Reader) (*http.Request, error) {
 	url, err := url.Parse(t.baseUrl.String())
 	if err != nil {
 		return nil, err
@@ -89,7 +90,7 @@ func (t *Client) newRequest(method, urlPath string, body io.Reader) (*http.Reque
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(method, url.String(), body)
+	req, err := http.NewRequestWithContext(ctx, method, url.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -101,8 +102,8 @@ func (t *Client) newRequest(method, urlPath string, body io.Reader) (*http.Reque
 	return req, nil
 }
 
-func (t *Client) do(method, path string, body io.Reader) (*http.Response, error) {
-	req, err := t.newRequest(method, path, body)
+func (t *Client) do(ctx context.Context, method, path string, body io.Reader) (*http.Response, error) {
+	req, err := t.newRequest(ctx, method, path, body)
 	if err != nil {
 		return nil, err
 	}
@@ -113,27 +114,27 @@ func (t *Client) do(method, path string, body io.Reader) (*http.Response, error)
 	return resp, nil
 }
 
-func (t *Client) Get(path string, body io.Reader) (*http.Response, error) {
-	return t.do("GET", path, body)
+func (t *Client) Get(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
+	return t.do(ctx, "GET", path, body)
 }
 
-func (t *Client) Post(path string, body io.Reader) (*http.Response, error) {
-	return t.do("POST", path, body)
+func (t *Client) Post(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
+	return t.do(ctx, "POST", path, body)
 }
 
-func (t *Client) Patch(path string, body io.Reader) (*http.Response, error) {
-	return t.do("PATCH", path, body)
+func (t *Client) Patch(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
+	return t.do(ctx, "PATCH", path, body)
 }
 
-func (t *Client) Put(path string, body io.Reader) (*http.Response, error) {
-	return t.do("PUT", path, body)
+func (t *Client) Put(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
+	return t.do(ctx, "PUT", path, body)
 }
 
-func (t *Client) Delete(path string, body io.Reader) (*http.Response, error) {
-	return t.do("DELETE", path, body)
+func (t *Client) Delete(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
+	return t.do(ctx, "DELETE", path, body)
 }
 
-func (t *Client) Upload(path string, fileData *os.File) (*http.Response, error) {
+func (t *Client) Upload(ctx context.Context, path string, fileData *os.File) (*http.Response, error) {
 	body, bodyWriter := io.Pipe()
 	writer := multipart.NewWriter(bodyWriter)
 	go func() {
@@ -148,7 +149,7 @@ func (t *Client) Upload(path string, fileData *os.File) (*http.Response, error) 
 		}
 		bodyWriter.CloseWithError(writer.Close())
 	}()
-	req, err := t.newRequest("POST", path, body)
+	req, err := t.newRequest(ctx, "POST", path, body)
 	if err != nil {
 		return nil, err
 	}

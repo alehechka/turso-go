@@ -1,6 +1,7 @@
 package turso
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 )
@@ -14,8 +15,8 @@ type ApiToken struct {
 
 type ApiTokensClient client
 
-func (a *ApiTokensClient) List() ([]ApiToken, error) {
-	res, err := a.client.Get("/v1/auth/api-tokens", nil)
+func (a *ApiTokensClient) List(ctx context.Context) ([]ApiToken, error) {
+	res, err := a.client.Get(ctx, "/v1/auth/api-tokens", nil)
 	if err != nil {
 		return []ApiToken{}, fmt.Errorf("failed to get api tokens list: %s", err)
 	}
@@ -38,10 +39,10 @@ type CreateApiToken struct {
 	Value string `json:"value"`
 }
 
-func (a *ApiTokensClient) Create(name string) (CreateApiToken, error) {
+func (a *ApiTokensClient) Create(ctx context.Context, name string) (CreateApiToken, error) {
 	url := fmt.Sprintf("/v2/auth/api-tokens/%s", name)
 
-	res, err := a.client.Post(url, nil)
+	res, err := a.client.Post(ctx, url, nil)
 	if err != nil {
 		return CreateApiToken{}, fmt.Errorf("failed to create token: %s", err)
 	}
@@ -63,10 +64,10 @@ func (a *ApiTokensClient) Create(name string) (CreateApiToken, error) {
 	return data.ApiToken, nil
 }
 
-func (a *ApiTokensClient) Revoke(name string) error {
+func (a *ApiTokensClient) Revoke(ctx context.Context, name string) error {
 	url := fmt.Sprintf("/v1/auth/api-tokens/%s", name)
 
-	res, err := a.client.Delete(url, nil)
+	res, err := a.client.Delete(ctx, url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to revoke API token: %s", err)
 	}

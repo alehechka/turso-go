@@ -1,6 +1,7 @@
 package turso
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -23,8 +24,8 @@ type LocationResponse struct {
 	Closest     []Location
 }
 
-func (c *LocationsClient) List() (map[string]string, error) {
-	r, err := c.client.Get("/v1/locations", nil)
+func (c *LocationsClient) List(ctx context.Context) (map[string]string, error) {
+	r, err := c.client.Get(ctx, "/v1/locations", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to request locations: %s", err)
 	}
@@ -43,8 +44,8 @@ func (c *LocationsClient) List() (map[string]string, error) {
 	return data.Locations, nil
 }
 
-func (c *LocationsClient) Get(location string) (LocationResponse, error) {
-	r, err := c.client.Get("/v1/locations/"+location, nil)
+func (c *LocationsClient) Get(ctx context.Context, location string) (LocationResponse, error) {
+	r, err := c.client.Get(ctx, "/v1/locations/"+location, nil)
 	if err != nil {
 		return LocationResponse{}, fmt.Errorf("failed to request location %s: %w", location, err)
 	}
@@ -69,8 +70,8 @@ type ClosestLocationResponse struct {
 	Server string
 }
 
-func (c *LocationsClient) Closest() (string, error) {
-	r, err := c.client.Get("https://region.turso.io", nil)
+func (c *LocationsClient) Closest(ctx context.Context) (string, error) {
+	r, err := c.client.Get(ctx, "https://region.turso.io", nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to request closest: %s", err)
 	}

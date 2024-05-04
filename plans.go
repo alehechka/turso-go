@@ -1,6 +1,7 @@
 package turso
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -22,8 +23,8 @@ type Plan struct {
 	}
 }
 
-func (c *PlansClient) List() ([]Plan, error) {
-	r, err := c.client.Get("/v1/plans", nil)
+func (c *PlansClient) List(ctx context.Context) ([]Plan, error) {
+	r, err := c.client.Get(ctx, "/v1/plans", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get plan list: %w", err)
 	}
@@ -45,13 +46,13 @@ type Subscription struct {
 	Overages bool   `json:"overages"`
 }
 
-func (c *SubscriptionClient) Get() (Subscription, error) {
+func (c *SubscriptionClient) Get(ctx context.Context) (Subscription, error) {
 	prefix := "/v1"
 	if c.client.Org != "" {
 		prefix = "/v1/organizations/" + c.client.Org
 	}
 
-	r, err := c.client.Get(prefix+"/subscription", nil)
+	r, err := c.client.Get(ctx, prefix+"/subscription", nil)
 	if err != nil {
 		return Subscription{}, fmt.Errorf("failed to get organization plan: %w", err)
 	}
@@ -67,7 +68,7 @@ func (c *SubscriptionClient) Get() (Subscription, error) {
 
 var ErrPaymentRequired = errors.New("payment required")
 
-func (c *SubscriptionClient) Update(plan, timeline string, overages *bool) error {
+func (c *SubscriptionClient) Update(ctx context.Context, plan, timeline string, overages *bool) error {
 	prefix := "/v1"
 	if c.client.Org != "" {
 		prefix = "/v1/organizations/" + c.client.Org
@@ -82,7 +83,7 @@ func (c *SubscriptionClient) Update(plan, timeline string, overages *bool) error
 		return fmt.Errorf("could not serialize request body: %w", err)
 	}
 
-	r, err := c.client.Post(prefix+"/subscription", body)
+	r, err := c.client.Post(ctx, prefix+"/subscription", body)
 	if err != nil {
 		return fmt.Errorf("failed to set organization plan: %w", err)
 	}
