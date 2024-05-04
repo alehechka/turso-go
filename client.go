@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"runtime/debug"
 )
 
 // Collection of all turso clients
@@ -16,6 +17,7 @@ type Client struct {
 	baseUrl    *url.URL
 	token      string
 	Org        string
+	version    string
 	httpClient *http.Client
 
 	// Single instance to be reused by all clients
@@ -45,8 +47,12 @@ type ClientOption interface {
 	apply(*Client)
 }
 
-func New(base *url.URL, token string, org string, options ...ClientOption) *Client {
-	c := &Client{baseUrl: base, token: token, Org: org, httpClient: http.DefaultClient}
+const BaseURL = "https://api.turso.tech"
+
+func New(token string, org string, options ...ClientOption) *Client {
+	baseUrl, _ := url.Parse(BaseURL)
+
+	c := &Client{baseUrl: baseUrl, token: token, Org: org, httpClient: http.DefaultClient, version: getVersion()}
 
 	for _, option := range options {
 		option.apply(c)
@@ -69,6 +75,22 @@ func New(base *url.URL, token string, org string, options ...ClientOption) *Clie
 	return c
 }
 
+func getVersion() (version string) {
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+
+	module := "github.com/alehechka/turso-go"
+	for _, dep := range bi.Deps {
+		if dep.Path == module {
+			return dep.Version
+		}
+	}
+
+	return
+}
+
 type withHTTPClient struct {
 	httpClient *http.Client
 }
@@ -79,6 +101,18 @@ func WithHTTPClient(httpClient *http.Client) ClientOption {
 
 func (o *withHTTPClient) apply(client *Client) {
 	client.httpClient = o.httpClient
+}
+
+type withBaseUrl struct {
+	baseUrl *url.URL
+}
+
+func WithBaseUrl(baseUrl *url.URL) ClientOption {
+	return &withBaseUrl{baseUrl: baseUrl}
+}
+
+func (o *withBaseUrl) apply(client *Client) {
+	client.baseUrl = o.baseUrl
 }
 
 func (c *Client) newRequest(ctx context.Context, method, urlPath string, body io.Reader) (*http.Request, error) {
@@ -97,7 +131,7 @@ func (c *Client) newRequest(ctx context.Context, method, urlPath string, body io
 	if c.token != "" {
 		req.Header.Add("Authorization", fmt.Sprint("Bearer ", c.token))
 	}
-	req.Header.Add("User-Agent", fmt.Sprintf("turso-go/%s (%s/%s)", Version, runtime.GOOS, runtime.GOARCH))
+	req.Header.Add("User-Agent", fmt.Sprintf("turso-go/%s (%s/%s)", c.version, runtime.GOOS, runtime.GOARCH))
 	req.Header.Add("Content-Type", "application/json")
 	return req, nil
 }
